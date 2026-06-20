@@ -1,0 +1,22 @@
+from pydantic import BaseModel
+from typing import Literal
+
+
+class IntentDecision(BaseModel):
+    intent: Literal["POSITIVE_FEEDBACK", "NEGATIVE_FEEDBACK", "CONTINUATION"]
+
+
+def classify_intent(message: str, llm) -> str:
+    structured_llm = llm.with_structured_output(IntentDecision)
+    messages = [
+        {"role": "system", "content": """Classify the user message into exactly one of:
+- POSITIVE_FEEDBACK: user liked or praised the last response
+- NEGATIVE_FEEDBACK: user disliked or complained about the last response
+- CONTINUATION: user is asking a new question or continuing the conversation"""},
+        {"role": "user", "content": message},
+    ]
+    try:
+        result = structured_llm.invoke(messages)
+        return result.intent
+    except Exception:
+        return "CONTINUATION"
