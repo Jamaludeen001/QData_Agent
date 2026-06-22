@@ -1,6 +1,6 @@
 # QData Agent
 
-> A fully custom, production-ready data analyst agent architected from the ground up — no LangChain AgentExecutor, no black box. Powered by MCP for tool orchestration, secured with JWT authentication (AWS KMS in production, local secret in dev), supports both CSV (dev) and Amazon Redshift (prod) as data sources, fully observable via LangSmith with per-run audit trails and user feedback scoring, and an LLM-based intent classifier that understands natural conversation. Every layer is owned, auditable, and production-hardened.
+> A fully custom, production-ready data analyst agent architected from the ground up — no LangChain AgentExecutor, no black box. Powered by MCP for tool orchestration, secured with JWT authentication (AWS KMS in production, local secret in dev), supports both CSV (dev) and Amazon Redshift (prod) as data sources, fully observable via LangSmith with per-run audit trails and user feedback scoring, an LLM-based intent classifier, and a production-grade router that separates normal conversation from data queries — no tools fired unless actually needed. Every layer is owned, auditable, and production-hardened.
 
 ---
 
@@ -10,6 +10,7 @@ Most agents are built on framework abstractions that hide what's really happenin
 QData Agent owns every layer:
 
 - **Custom agent loop** — no AgentExecutor, full control over every decision
+- **Production-grade router** — separates chitchat from data queries before agent runs
 - **Structured output** — LLM forced to return valid schema via Pydantic, zero parse errors
 - **AST-level SQL validation** — not keyword filtering, actual parse tree analysis
 - **MCP architecture** — tools live as an independent Streamable HTTP service
@@ -24,24 +25,34 @@ QData Agent owns every layer:
 ## Architecture
 
 ```
-client.py
-    │
-    │  Streamable HTTP + JWT (HS256 dev / RS256 prod)
-    ▼
-server.py (MCP Server — http://localhost:8000/mcp)
-    │
-    ├── tool_inspect_source_schema   ← schema.table listing (dev) / Redshift schema (prod)
-    ├── tool_query_source            ← AST validated, SELECT only
-    ├── tool_load_source_into_temp
-    ├── tool_query_temp              ← sandboxed DuckDB, source never touched
-    └── tool_list_temp_tables
+User input
     │
     ▼
-tools/          ← each tool as an isolated package
-core/           ← validators, pathguard, duckdb runner, redshift runner
-agent/          ← custom loop with structured output, audit, classifier
-auth/           ← JWT handler (KMS prod / local dev)
-config.py       ← single source of truth, ENV flag switches dev/prod
+Intent Classifier (feedback detection)
+    │
+    ├── POSITIVE_FEEDBACK → log score 1.0 to LangSmith
+    ├── NEGATIVE_FEEDBACK → log score 0.0 to LangSmith
+    └── CONTINUATION
+            │
+            ▼
+        Router (intent routing)
+            │
+            ├── CHITCHAT      → direct_respond (no tools, no agent loop)
+            ├── CLARIFICATION → ask user for more info
+            └── DATA_QUERY
+                    │
+                    ▼
+                Agent Loop (MCP tools)
+                    │
+                    │  Streamable HTTP + JWT
+                    ▼
+                MCP Server
+                    │
+                    ├── tool_inspect_source_schema
+                    ├── tool_query_source
+                    ├── tool_load_source_into_temp
+                    ├── tool_query_temp
+                    └── tool_list_temp_tables
 ```
 
 ---
@@ -52,7 +63,7 @@ config.py       ← single source of truth, ENV flag switches dev/prod
 QData_Agent/
 │
 ├── server.py                        # MCP server — exposes all tools over Streamable HTTP
-├── client.py                        # MCP client — connects to server, runs agent loop
+├── client.py                        # MCP client — router + agent loop
 │
 ├── tools/
 │   ├── schema_inspector/
@@ -74,8 +85,10 @@ QData_Agent/
 │
 ├── agent/
 │   ├── agent.py                     # fully custom agent loop with structured output
-│   ├── audit.py                     # LangSmith audit — every run + tool call logged
-│   └── classifier.py                # LLM-based intent classifier with structured output
+│   ├── router.py                    # intent router — chitchat vs data query vs clarification
+│   ├── responder.py                 # direct conversation handler for chitchat
+│   ├── classifier.py                # feedback classifier — positive / negative / continuation
+│   └── audit.py                     # LangSmith audit — every run + tool call logged
 │
 ├── auth/
 │   ├── __init__.py
@@ -129,21 +142,29 @@ QData_Agent/
 ## How the Agent Thinks
 
 ```
-User: "Show top 5 customers by revenue"
+User: "hi"
+    → classifier  : CONTINUATION
+    → router      : CHITCHAT
+    → responder   : "Hello! How can I help you today?"
+    → no tools fired ✅
 
-Step 1 → tool_inspect_source_schema()
-       ← Schema: sales
-            Table: customers  SQL name: sales.customers
-            Table: orders     SQL name: sales.orders
+User: "show top 5 customers by revenue"
+    → classifier  : CONTINUATION
+    → router      : DATA_QUERY
+    → agent loop  :
+        Step 1 → tool_inspect_source_schema()
+               ← Schema: sales → customers, orders
+        Step 2 → tool_query_source(
+                    sql="SELECT c.name, SUM(o.revenue) as total
+                         FROM sales.customers c
+                         JOIN sales.orders o ON c.id = o.customer_id
+                         GROUP BY c.name ORDER BY total DESC LIMIT 5")
+               ← results
+        Final  → "The top 5 customers by revenue are..."  ✅
 
-Step 2 → tool_query_source(
-            sql="SELECT c.name, SUM(o.revenue) as total
-                 FROM sales.customers c
-                 JOIN sales.orders o ON c.id = o.customer_id
-                 GROUP BY c.name ORDER BY total DESC LIMIT 5")
-       ← results table
-
-Final  → "The top 5 customers by revenue are: ..."
+User: "great thanks"
+    → classifier  : POSITIVE_FEEDBACK
+    → LangSmith   : score 1.0 logged ✅
 ```
 
 ---
@@ -163,6 +184,7 @@ Run (chain)
 - User feedback tied to `run_id` — thumbs up scores `1.0`, thumbs down `0.0`
 - Session ID threads through every trace for full conversation audit
 - Termination reason recorded — `final_answer`, `max_steps`, or error
+- Router decisions logged at DEBUG level
 
 ---
 
@@ -211,12 +233,62 @@ data/source/
 
 ```bash
 python server.py
+
+# QData Agent MCP Server starting...
+# Endpoint     : http://0.0.0.0:8000/mcp
+# Health check : http://0.0.0.0:8000/health
+# Transport    : Streamable HTTP
+# Auth         : JWT (Local HS256)
+# Data source  : CSV (DuckDB)
 ```
 
 **5. Start the agent**
 
 ```bash
 python client.py
+
+# Session    : abc-123...
+# MCP Server : http://localhost:8000/mcp
+# Mode       : Dev (CSV)
+#
+# Tools available (5):
+#   - tool_inspect_source_schema
+#   - tool_query_source
+#   - tool_load_source_into_temp
+#   - tool_query_temp
+#   - tool_list_temp_tables
+#
+# You:
+```
+
+---
+
+## Example Conversations
+
+```
+You: hi
+Bot: Hello! How can I help you today?
+
+You: what schemas do we have?
+Bot: [inspects schema] You have sales (customers, orders) and finance (transactions).
+
+You: show me top 5 customers by revenue
+Bot: [queries data] The top 5 customers by revenue are...
+
+You: great thanks
+Bot: Glad that helped!
+
+You: what is machine learning?
+Bot: Machine learning is a field of AI where systems learn from data...
+
+You: analyse this
+Bot: Could you be more specific? Which table or schema are you interested in?
+
+You: that last answer was wrong
+Bot: Sorry! What were you looking for exactly?
+
+You: exit
+Session cleaned up.
 ```
 
 ---
@@ -230,8 +302,9 @@ python client.py
 | `ENV` | Yes | Set to `dev` |
 | `LANGCHAIN_API_KEY` | Yes | LangSmith API key |
 | `GOOGLE_API_KEY` | Yes | Google AI Studio key |
-| `JWT_SECRET` | Yes | Min 32 char secret |
-| `MCP_SERVER_URL` | Yes | MCP server endpoint |
+| `JWT_SECRET` | Yes | Min 32 char secret — generate with `python -c "import secrets; print(secrets.token_hex(32))"` |
+| `MCP_SERVER_URL` | Yes | MCP server endpoint URL |
+| `LANGCHAIN_PROJECT` | No | LangSmith project name (default: `QData_Agent`) |
 
 ### Production
 
@@ -239,10 +312,53 @@ python client.py
 |---|---|---|
 | `ENV` | Yes | Set to `prod` |
 | `LANGCHAIN_API_KEY` | Yes | LangSmith API key |
-| `KMS_KEY_ID` | Yes | AWS KMS key ARN |
+| `KMS_KEY_ID` | Yes | AWS KMS key ARN for JWT RS256 signing |
 | `REDSHIFT_HOST` | Yes | Redshift cluster endpoint |
 | `REDSHIFT_DATABASE` | Yes | Redshift database name |
-| `MCP_SERVER_URL` | Yes | MCP server endpoint |
+| `REDSHIFT_PORT` | No | Redshift port (default: `5439`) |
+| `MCP_SERVER_URL` | Yes | MCP server endpoint URL |
+| `ISSUER` | No | JWT issuer (default: `qdataagent-client`) |
+| `AUDIENCE` | No | JWT audience (default: `qdataagent-mcp-server`) |
+| `ACCESS_TTL` | No | JWT expiry in seconds (default: `3600`) |
+
+---
+
+## Requirements
+
+```
+python >= 3.11
+langchain-openai
+langchain-google-genai
+langsmith
+mcp
+fastmcp
+uvicorn
+duckdb
+sqlglot
+pandas
+python-dotenv
+starlette
+pyjwt
+boto3
+redshift-connector
+fastapi
+python-multipart
+argon2-cffi
+httpx
+pydantic
+google-generativeai
+```
+
+---
+
+## What's Not Included (intentionally)
+
+This project is intentionally kept minimal and auditable. The following are out of scope until the foundation is fully tested:
+
+- RAG / vector search
+- Web UI
+- Multi-agent orchestration
+- Docker deployment
 
 ---
 
