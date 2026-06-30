@@ -1,3 +1,1 @@
-Hi!
-
-Contributed to deployment of data pipelines by executing GitHub workflows, deploying changes through AWS CloudFormation stacks, and promoting code across DEV, QA, and PROD environments. Involved in monitoring workflow executions, performing post-deployment validations, and troubleshooting issues to ensure stable and reliable pipeline operations.
+Contributed to Knowledge Management (KM) by documenting data pipeline flows, schema mappings, and troubleshooting steps in KT documents and internal repositories. Shared knowledge with team members through collaboration and support during issue resolution, helping improve understanding of AWS Glue, Redshift, and deployment processes.
