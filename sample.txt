@@ -1,3 +1,3 @@
 Hi!
 
-Actively contributed to testing management for multiple data pipelines involving Salesforce, AWS Glue, and Redshift. Performed end-to-end validation of data ingestion, transformation, and reporting by executing functional and data quality test cases. Ensured schema consistency, handled data discrepancies such as delimiter and column mismatches, and validated results across source and target systems. Collaborated with cross-functional teams during QA cycles to identify and resolve issues proactively, ensuring stable and reliable deployments. Helped improve overall data quality by catching defects early in the testing phase.
+Supported validation and testing activities by ensuring proper data handling and preventing unintended data exposure (data leakage), along with performing unit testing on data pipelines to verify schema mappings and data accuracy.
