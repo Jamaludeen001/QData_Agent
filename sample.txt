@@ -1,3 +1,3 @@
 Hi!
 
-Contributed to development and optimization of data pipeline code using AWS Glue, Redshift, and Python by implementing transformation logic, schema handling, and efficient SQL queries, ensuring reliable and maintainable data workflows.
+Contributed to deployment of data pipelines by executing GitHub workflows, deploying changes through AWS CloudFormation stacks, and promoting code across DEV, QA, and PROD environments. Involved in monitoring workflow executions, performing post-deployment validations, and troubleshooting issues to ensure stable and reliable pipeline operations.
