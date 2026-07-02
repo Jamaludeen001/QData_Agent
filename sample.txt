@@ -1,24 +1,3 @@
-Hi [Product Owner's Name],
-
-Sharing a status update on the security rules implementation across our corporate views.
-
-Overview
-Total 157 corporate views require security rules across 8 rules, with each view mapped to its corresponding rule(s).
-
-Completed
-We have successfully completed and deployed security rules for 143 out of 157 views in the production environment. These views have been validated and are functioning as expected with the correct rules applied, covering the majority of the scope across all 8 rules.
-
-Remaining Items (14 views)
-- 6 views: Base table exists but the view has not been created yet. We are creating these views and will apply the corresponding security rules once they're ready.
-- 2 views: The EBELN column, which is used to join with the company code table, is not being retrieved from the base table. We are investigating the cause and working on a fix.
-- 2 views: Base table resides in a different schema than expected. We are working through the schema mapping to ensure the rule references the correct source correctly.
-- 2 views: New views identified under Rule 3 that were not part of the original scope. Implementation is in progress.
-- 1 view (LFA1, Rule 7): Pending a design decision from your side – see below.
-
-Open Decision Needed – LFA1 (Rule 7)
-Should the rule be applied to LFA1 (joined via LFB1), or to LFB1 (joined via LFA1)? Please confirm so we can proceed.
-
-We'll continue working through the remaining items and will keep you updated on progress. Happy to hop on a call if useful.
-
-Thanks and regards,
-[Your Name]
+i need to add the filter metric connects to the log group where this log roup has multiple dms tasks where for each dms tasks failure seperate alarm should be created like separate metric filters am i crt the current approach for the filter pattern is 
+?"failure" ?"Failure" ?"FAILURE" ?"error" ?"Error" ?"ERROR" explain this filter pattern and why is ? included and what happens if not include ? and i am think like having filter pattern as Filter pattern
+"failure" "JBVKJFDNVKJFDNVKDCCKJDSDDS" explain and give crt filter pattern
