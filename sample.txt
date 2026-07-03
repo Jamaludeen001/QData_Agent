@@ -1,19 +1,36 @@
--- corporate.v_s4_eskn source
-
 CREATE OR REPLACE VIEW corporate.v_s4_eskn
-AS  SELECT to_char(a.eff_dt, 'YYYYMMDDHH24MISS'::text) AS header__modified_batch, a.eff_dt AS header__from_date, a.mandt, a.packno, a.zekkn, a.bekkn, a.loekz, a.aedat, a.kflag, a.wproz, a.netwr, a.sakto, a.gsber, a.kostl, a.vbeln, a.vbelp, a.veten, a.anln1, a.anln2, a.aufnr, a.kokrs, a.xbkst, a.xbauf, a.xbpro, a.erekz, a.kstrg, a.paobjnr, a.prctr, a.ps_psp_pnr, a.nplnr, a.aufpl, a.imkey, a.aplzl, a.vptnr, a.fipos, a.recid, a.zzdummy01, a.dummy_incl_eew_cobl, a.fistl, a.geber, a.fkber, a.mwskz, a.txjcd, a.navnw, a.kblnr, a.kblpos, a.dabrz, a.lstar, a.prznr, a.grant_nbr, a.fm_split_batch, a.fm_split_begru, a.budget_pd, a.fmfgus_key, a._dataaging, a.tcobjnr, a.dateofservice, a.notaxcorr, a.diffoptrate, a.hasdiffoptrate
+AS SELECT
+    to_char(a.eff_dt, 'YYYYMMDDHH24MISS'::text) AS header__modified_batch,
+    a.eff_dt AS header__from_date,
+    a.mandt, a.packno, a.zekkn, a.bekkn, a.loekz, a.aedat, a.kflag, a.wproz,
+    a.netwr, a.sakto, a.gsber, a.kostl, a.vbeln, a.vbelp, a.veten, a.anln1,
+    a.anln2, a.aufnr, a.kokrs, a.xbkst, a.xbauf, a.xbpro, a.erekz, a.kstrg,
+    a.paobjnr, a.prctr, a.ps_psp_pnr, a.nplnr, a.aufpl, a.imkey, a.aplzl,
+    a.vptnr, a.fipos, a.recid, a.zzdummy01, a.dummy_incl_eew_cobl, a.fistl,
+    a.geber, a.fkber, a.mwskz, a.txjcd, a.navnw, a.kblnr, a.kblpos, a.dabrz,
+    a.lstar, a.prznr, a.grant_nbr, a.fm_split_batch, a.fm_split_begru,
+    a.budget_pd, a.fmfgus_key, a._dataaging, a.tcobjnr, a.dateofservice,
+    a.notaxcorr, a.diffoptrate, a.hasdiffoptrate
    FROM corporate_raw.eskn a
-   JOIN corporate_raw.ekko "k" ON a.ebeln::text = "k".ebeln::text AND "k".end_dt = '2999-12-31 00:00:00'::timestamp without time zone
-  WHERE a.end_dt = '2999-12-31 00:00:00'::timestamp without time zone AND (("k".bukrs IN ( SELECT cte.ca_bukrs_sec
-      FROM ( SELECT b.ca_bukrs_sec
-              FROM corporate_raw."hana_root.sap_hsc.edp/zedp_sapbw_combined_security" b
-             WHERE b.end_dt = '2999-12-31 00:00:00'::timestamp without time zone AND (lower(b.uname::bpchar::character varying::text) = lower("current_user"()::character varying::text) OR lower(b.uname::bpchar::character varying::text) = lower(regexp_replace("current_user"()::character varying::text, '^aad:(.*)@fpl.com$'::character varying::text, "substring"("substring"("current_user"()::character varying::text, -7, len("current_user"())), 5))))) cte)) OR lower("current_user"()::character varying::text) = lower('zzz0intsap'::character varying::text));
 
--- Permissions
+   JOIN corporate_raw.eslh eslh
+   ON a.mandt = eslh.mandt AND a.packno = eslh.packno 
+   AND eslh.end_dt = '2999-12-31 00:00:00'::timestamp without time zone
 
-GRANT ALL ON TABLE corporate.v_s4_eskn TO corporate_app_owner;
-GRANT SELECT ON TABLE corporate.v_s4_eskn TO group corporate_sel_group;
-GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE corporate.v_s4_eskn TO group corporate_dml_group;
-GRANT ALL ON TABLE corporate.v_s4_eskn TO group corporate_adm_group;
-GRANT SELECT ON TABLE corporate.v_s4_eskn TO group corporate_sel_viewonly_group;
-GRANT SELECT ON TABLE corporate.v_s4_eskn TO "2518(epv)";
+   JOIN corporate_raw.ekpo ekpo
+     ON eslh.mandt = ekpo.mandt AND eslh.ebeln = ekpo.ebeln AND eslh.ebelp = ekpo.ebelp
+    AND ekpo.end_dt = '2999-12-31 00:00:00'::timestamp without time zone
+
+   JOIN corporate_raw.ekko "k"
+     ON ekpo.mandt = "k".mandt AND ekpo.ebeln = "k".ebeln
+    AND "k".end_dt = '2999-12-31 00:00:00'::timestamp without time zone
+
+  WHERE a.end_dt = '2999-12-31 00:00:00'::timestamp without time zone
+    AND (("k".bukrs IN ( SELECT cte.ca_bukrs_sec
+        FROM ( SELECT b.ca_bukrs_sec
+                FROM corporate_raw."hana_root.sap_hsc.edp/zedp_sapbw_combined_security" b
+               WHERE b.end_dt = '2999-12-31 00:00:00'::timestamp without time zone
+                 AND (lower(b.uname::bpchar::character varying::text) = lower("current_user"()::character varying::text)
+                      OR lower(b.uname::bpchar::character varying::text) = lower(regexp_replace("current_user"()::character varying::text, '^aad:(.*)@fpl.com$'::character varying::text, "substring"("substring"("current_user"()::character varying::text, -7, len("current_user"())), 5))))
+        ) cte)
+    ) OR lower("current_user"()::character varying::text) = lower('zzz0intsap'::character varying::text));
