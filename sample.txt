@@ -10,5 +10,11 @@
 2026-02-20T12:32:38 [PERFORMANCE ]I: REDSHIFT:S3 MOVE:lms_dw.pa_cpnt_evthst Start sending CSV file to S3: /rdsdbdata/data/tasks/K6AMOGJCMZC2HVKYW3WBS3I23RDNU2QDDVIKBEQ/cloud/5/LOAD0000000A.csv.gz (cloud_imp.c:3019)
 39
 2026-02-20T12:33:05 [TASK_MANAGER ]I: Task - K6AMOGJCMZC2HVKYW3WBS3I23RDNU2QDDVIKBEQ is in STOPPED state, updating starting status to AR_NOT_APPLICABLE (repository.c:5483)
+
+
+
+
+
+"K6AMOGJCMZC2HVKYW3WBS3I23RDNU2QDDVIKBEQ" ?"failure" ?"Failure" ?"FAILURE" ?"error" ?"Error" ?"ERROR" ?"suspended" ?"SUSPENDED" ?"Suspended"
 40
 2026-02-20T12:33:05 [TASK_MANAGER ]I: Updated Task, K6AMOGJCMZC2HVKYW3WBS3I23RDNU2QDDVIKBEQ, info with TaskState - 0 (replicationtask.c:4561)
