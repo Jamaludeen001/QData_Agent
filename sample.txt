@@ -1,20 +1,1169 @@
-5
-2026-02-20T12:30:03 [TARGET_LOAD ]E: Failed to copy data of file /rdsdbdata/data/tasks/K6AMOGJCMZC2HVKYW3WBS3I23RDNU2QDDVIKBEQ/cloud/2/LOAD00000005.csv to database [1022509] (cloud_imp.c:2843)
-7
-2026-02-20T12:30:03 [TASK_MANAGER ]W: Table 'LMS_DW_OWNER'.'PA_CBT_STUD_CPNT' was errored/suspended (subtask 2 thread 1). Failed (retcode -1) to execute statement; RetCode: SQL_ERROR SqlState: 42501 NativeError: 30 Message: [Amazon][Amazon Redshift] (30) Error occurred while trying to execute a query: [SQLState 42501] ERROR: permission denied for schema lms_dw ; RetCode: SQL_ERROR SqlState: 01000 NativeError: 0 Message: INFO: Load into table 'pa_cbt_stud_cpnt' completed, 6401838 record(s) loaded successfully. ; Failed to load lms_dw.pa_cbt_stud_cpnt from S3, file name: LOAD00000005.csv; Failed to copy data of file /rdsdbdata/data/tasks/K6AMOGJCMZC2HVKYW3WBS3I23RDNU2QDDVIKBEQ/cloud/2/LOAD00000005.csv to database; Handling End of table 'lms_dw'.'PA_CBT_STUD_CPNT' loading failed by subtask 2 thread 1ad 1 1 thread 1 (replicationtask.c:3081)
-21
-2026-02-20T12:30:54 [PERFORMANCE ]I: REDSHIFT:S3 MOVE:lms_dw.pa_cpnt_evthst Start sending CSV file to S3: /rdsdbdata/data/tasks/K6AMOGJCMZC2HVKYW3WBS3I23RDNU2QDDVIKBEQ/cloud/5/LOAD00000008.csv.gz (cloud_imp.c:3019)
-23
-2026-02-20T12:31:47 [PERFORMANCE ]I: REDSHIFT:S3 MOVE:lms_dw.pa_cpnt_evthst Start sending CSV file to S3: /rdsdbdata/data/tasks/K6AMOGJCMZC2HVKYW3WBS3I23RDNU2QDDVIKBEQ/cloud/5/LOAD00000009.csv.gz (cloud_imp.c:3019)
-25
-2026-02-20T12:32:38 [PERFORMANCE ]I: REDSHIFT:S3 MOVE:lms_dw.pa_cpnt_evthst Start sending CSV file to S3: /rdsdbdata/data/tasks/K6AMOGJCMZC2HVKYW3WBS3I23RDNU2QDDVIKBEQ/cloud/5/LOAD0000000A.csv.gz (cloud_imp.c:3019)
-39
-2026-02-20T12:33:05 [TASK_MANAGER ]I: Task - K6AMOGJCMZC2HVKYW3WBS3I23RDNU2QDDVIKBEQ is in STOPPED state, updating starting status to AR_NOT_APPLICABLE (repository.c:5483)
+##########################################################################################
+# AWS CloudFormation Template to provision a DMS Replication Instance (With CloudWatch Alarms)
+# Creation date: 10/20/2021
+# Created By: Cedric El Khoury
+# Last modified date: 09/26/2022
+# Last modified By: Carlos Esparza medel
+####################################################################################
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS CloudFormation Template that provisions a DMS Replication Instance (CloudWatch Alarms)
+################################## Metadata ###############################################
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      - 
+        Label: 
+          default: "Project Details"
+        Parameters: 
+          - AppCode
+          - AppCodeLower
+          - Environment
+          - BU
+          - BULower
+          - Purpose
+          - Requestor
+          - OwnerContact
+          - SupportContact
+      - 
+        Label: 
+          default: "DMS Replication Instance Details"
+        Parameters: 
+          - ReplicationInstanceName
+          - ReplicationInstanceType
+          - ReplicationInstanceAZ
+          - AllocatedStorage
+          - SecurityGroups
+          - VPCShortName
+          - AutoMinorVersionUpgrade
+          - PreferredMaintenanceWindow
+          - WeekendOperation
+          - AutomateShutdown
+      - 
+        Label: 
+          default: "CloudWatch Alarms Details"
+        Parameters: 
+          - EmailAddress
+          - ThresholdValue10PCT
+          - ThresholdValue20PCT
+          - ThresholdValue30PCT
 
+################################## Parameters ###############################################
+Parameters:
+  
+  AppCode:
+    Type: String
+    MaxLength: 5
+    AllowedPattern: '^([A-Z0-9_-]){5}$'
+    Description: The application code name (NEECode) cannot be of more that 5 characters
+    ConstraintDescription: Appcode field does not match the required constraints
+    Default: EN411
 
+  AppCodeLower:
+    Type: String
+    MaxLength: 5
+    AllowedPattern: '^([a-z0-9_-]){5}$'
+    Description: The application code name (NEECode) cannot be of more that 5 characters
+    ConstraintDescription: Appcode field does not match the required constraints
+    Default: en411
 
+  Environment:
+    Type: String
+    AllowedValues:
+      - Prod
+      - Test
+      - Dev
+      - QA
+      - DR
+      - Sandbox
+    Default: Dev
 
+  BU:
+    Type: String
+    Description: What is the Business Unit?
+    AllowedValues:
+      - NUC
+      - PD
+      - PGD
+      - CS
+      - IT
+      - AllBU
+      - GASINFRA
 
-"K6AMOGJCMZC2HVKYW3WBS3I23RDNU2QDDVIKBEQ" ?"failure" ?"Failure" ?"FAILURE" ?"error" ?"Error" ?"ERROR" ?"suspended" ?"SUSPENDED" ?"Suspended"
-40
-2026-02-20T12:33:05 [TASK_MANAGER ]I: Updated Task, K6AMOGJCMZC2HVKYW3WBS3I23RDNU2QDDVIKBEQ, info with TaskState - 0 (replicationtask.c:4561)
+  BULower:
+    Type: String
+    Description: What is the Business Unit?
+    AllowedValues:
+      - nuc
+      - pd
+      - pgd
+      - cs
+      - it
+      - allbu 
+      - gasinfra
+
+  Purpose:
+    Type: String
+    Description: Enter a brief summary of the replication instance purpose
+
+  ReplicationInstanceName:
+    Type: String
+    MinLength: '1'
+    MaxLength: '50'
+    #AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    Description: Must be unique and 1-50 characters long. Must begin with a letter and contain only alphanumeric characters, dashes and underscores
+    ConstraintDescription: 'Must be unique and 1-50 characters long. Must begin with a letter and contain only alphanumeric characters, dashes and underscores.'
+
+  ReplicationInstanceType:
+    Description: Choose the type of instance that you want to use for Replication Instance
+    Type: String
+    AllowedValues:
+      - dms.t2.micro
+      - dms.t2.small
+      - dms.t2.medium
+      - dms.t2.large
+      - dms.c4.large
+      - dms.c4.xlarge
+      - dms.c4.2xlarge
+      - dms.c4.4xlarge
+    Default: dms.t2.medium
+
+  ReplicationInstanceAZ:
+    Description: Define what AvailabilityZone the EBS volume will be created in
+    Type: String
+    Default: ""
+    AllowedValues:
+      - ""
+      - us-east-1a
+      - us-east-1b
+      - us-east-1c
+      - us-east-1d
+      - us-east-1e
+      - us-east-1f
+
+  AllocatedStorage:
+    Description: Define the size in GB for the volume that you want to create
+    Type: String
+    Default: 30
+    AllowedPattern: "[0-9]*"
+
+  Requestor:
+    Type: String
+    Description: Please specify email address of the requestor
+
+  OwnerContact:
+      Type: String
+      Description: Please specify email address of the owner
+      AllowedPattern: '^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$'
+      ConstraintDescription: OwnerContact field must be an email address
+      Default: Nelson.Castellanos@fpl.com
+      
+  SupportContact:
+      Type: String
+      Description: Please specify email address of the support contact
+      AllowedPattern: '^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$'
+      ConstraintDescription: SupportContact field must be an email address
+      Default: DL-EDP-PLATFORM@nexteraenergy.com
+
+  SecurityGroups:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Description: Please specify security groups to be attached to the Replication Instance
+
+  VPCShortName:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Description: 'Replication Instance VPC ID'
+    Default: '/account/VPCShortName'
+
+  AutoMinorVersionUpgrade:
+    Type: String
+    Description: Allow minor engine upgrades to be automatically made to the instance during maintenance window
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Default: 'true'
+
+  PreferredMaintenanceWindow: 
+    Type: String
+    Description: Please specify a preferred weekly maintenance window (30 mins in UTC)
+    Default: Sun:19:00-Sun:23:00
+
+  WeekendOperation:
+    Type: String
+    Description: Please specify if the replication instance conducts weekend operations
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  AutomateShutdown:
+    Type: String
+    Description: This field specifies if the server needs to be automatically shut down every day
+    AllowedValues:
+      - "yes"
+      - "no"
+    Default: "no"
+
+  EmailAddress: 
+    Description: Please provide the Email Name or Distribution list Name
+    Type: String
+    AllowedValues:
+      - DL-EDP-PLATFORM
+      - DL-EDP-SUPPORT
+    Default: DL-EDP-SUPPORT
+  
+  ThresholdValue30PCT:
+    Description: Please provide the 30% of the "AllocatedStorage" expressed in exponential (1e9 = 1GB)
+    Type: Number
+  
+  ThresholdValue20PCT:
+    Description: Please provide the 20% of the "AllocatedStorage" expressed in exponential (1e9 = 1GB)
+    Type: Number
+  
+  ThresholdValue10PCT:
+    Description: Please provide the 10% of the "AllocatedStorage" expressed in exponential (1e9 = 1GB)
+    Type: Number
+
+################################## Mappings ##################################################
+Mappings:
+  RegionMap:
+    us-east-1:
+      Region: V
+      RegionLower: v
+
+################################## Conditions ##################################################
+Conditions: 
+  IsNotProd: !Not [!Equals [!Ref Environment, 'Prod']]
+
+####################################### Resources #############################################
+
+Resources:
+  ReplicationInstance:
+    Type: "AWS::DMS::ReplicationInstance"
+    Properties:
+      AllocatedStorage: !Ref AllocatedStorage
+      AutoMinorVersionUpgrade: !Ref AutoMinorVersionUpgrade
+      AvailabilityZone: !Ref ReplicationInstanceAZ
+      KmsKeyId: !ImportValue Platform-Default-KMS
+      MultiAZ: 'false'
+      PreferredMaintenanceWindow: !Ref PreferredMaintenanceWindow
+      PubliclyAccessible: false
+      ReplicationInstanceClass: !Ref ReplicationInstanceType
+      ReplicationSubnetGroupIdentifier: !ImportValue Platform-Default-DMS-Subnet-Group
+      ReplicationInstanceIdentifier: !Join [ "-", [ 'dms', !Join ["", [ !ImportValue Account-Global-AccountCodeLower, !FindInMap [RegionMap, !Ref "AWS::Region", RegionLower]]], !Ref AppCodeLower, !Ref BULower, !Ref ReplicationInstanceName ]]
+      Tags:
+        - Key: AppCode
+          Value: !Ref AppCode
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Requestor
+          Value: !Ref Requestor
+        - Key: BU
+          Value: !Ref BU
+        - Key: Purpose
+          Value: !Ref Purpose
+        - Key: OwnerContact
+          Value: !Ref OwnerContact
+        - Key: SupportContact
+          Value: !Ref SupportContact
+        - Key: AutomateShutdown
+          Value: !Ref AutomateShutdown
+        - Key: WeekendOperation
+          Value: !Ref WeekendOperation
+        - Key: StackName
+          Value: !Ref 'AWS::StackName'
+
+      VpcSecurityGroupIds: !Ref SecurityGroups
+
+  DMSCPUUtilization70:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      Namespace: AWS/DMS
+      AlarmActions: [!Sub "arn:aws:sns:us-east-1:${AWS::AccountId}:NE789-IncidentTicketProd"]
+      AlarmDescription:
+        Fn::Join:
+          - ""
+          - - "App="
+            - "EDP"
+            - " "
+            - "arsRequired="
+            - !If [IsNotProd, "0", "1"]
+            - " "
+            - "arsSeverity="
+            - "SEV4"
+            - " "
+            - "arsAutoTag="
+            - "EDP_PLATFORM_TEAM"
+            - " "
+            - "emailRequired="
+            - "1"
+            - " "
+            - "emailSubject="
+            - "DMS Replication Instance CPU Utilization is greater than 70 percent"
+            - " "
+            - "environment="
+            - !Ref Environment 
+            - " "
+            - "emailAddress="
+            - Ref: EmailAddress
+      AlarmName:
+        Fn::Join:
+          - "_"
+          - - "en411_edp_cwa_cpu_utilization_70"
+            - Ref: ReplicationInstanceName             
+      ComparisonOperator: "GreaterThanThreshold"
+      Dimensions:
+        - Name: ReplicationInstanceIdentifier
+          Value: !Join [ "-", [ 'dms', !Join ["", [ !ImportValue Account-Global-AccountCodeLower, !FindInMap [RegionMap, !Ref "AWS::Region", RegionLower]]], !Ref AppCodeLower, !Ref BULower, !Ref ReplicationInstanceName ]]
+      MetricName: "CPUUtilization"
+      Namespace: "AWS/DMS"
+      Period: 300 
+      EvaluationPeriods: 1
+      Statistic: Average
+      Threshold: 70
+      TreatMissingData: "missing"
+
+  DMSCPUUtilization80:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      Namespace: AWS/DMS
+      AlarmActions: [!Sub "arn:aws:sns:us-east-1:${AWS::AccountId}:NE789-IncidentTicketProd"]
+      AlarmDescription:
+        Fn::Join:
+          - ""
+          - - "App="
+            - "EDP"
+            - " "
+            - "arsRequired="
+            - !If [IsNotProd, "0", "1"]
+            - " "
+            - "arsSeverity="
+            - !If [IsNotProd, "SEV4", "SEV3"]
+            - " "
+            - "arsAutoTag="
+            - "EDP_PLATFORM_TEAM"
+            - " "
+            - "emailRequired="
+            - "1"
+            - " "
+            - "emailSubject="
+            - "DMS Replication Instance CPU Utilization is greater than 80 percent"
+            - " "
+            - "environment="
+            - !Ref Environment
+            - " "
+            - "emailAddress="
+            - Ref: EmailAddress
+      AlarmName:
+        Fn::Join:
+          - "_"
+          - - "en411_edp_cwa_cpu_utilization_80"
+            - Ref: ReplicationInstanceName              
+      ComparisonOperator: "GreaterThanThreshold"
+      Dimensions:
+        - Name: ReplicationInstanceIdentifier
+          Value: !Join [ "-", [ 'dms', !Join ["", [ !ImportValue Account-Global-AccountCodeLower, !FindInMap [RegionMap, !Ref "AWS::Region", RegionLower]]], !Ref AppCodeLower, !Ref BULower, !Ref ReplicationInstanceName ]]
+      MetricName: "CPUUtilization"
+      Namespace: "AWS/DMS"
+      Period: 300 
+      EvaluationPeriods: 1
+      Statistic: Average
+      Threshold: 80
+      TreatMissingData: "missing"
+
+  DMSCPUUtilization90:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      Namespace: AWS/DMS
+      AlarmActions: [!Sub "arn:aws:sns:us-east-1:${AWS::AccountId}:NE789-IncidentTicketProd"]
+      AlarmDescription:
+        Fn::Join:
+          - ""
+          - - "App="
+            - "EDP"
+            - " "
+            - "arsRequired="
+            - !If [IsNotProd, "0", "1"]
+            - " "
+            - "arsSeverity="
+            - !If [IsNotProd, "SEV4", "SEV2"]
+            - " "
+            - "arsAutoTag="
+            - "EDP_PLATFORM_TEAM"
+            - " "
+            - "emailRequired="
+            - "1"
+            - " "
+            - "emailSubject="
+            - "DMS Replication Instance CPU Utilization is greater than 90 percent"
+            - " "
+            - "environment="
+            - !Ref Environment
+            - " "
+            - "emailAddress="
+            - Ref: EmailAddress
+      AlarmName:
+        Fn::Join:
+          - "_"
+          - - "en411_edp_cwa_cpu_utilization_90"
+            - Ref: ReplicationInstanceName              
+      ComparisonOperator: "GreaterThanThreshold"
+      Dimensions:
+        - Name: ReplicationInstanceIdentifier
+          Value: !Join [ "-", [ 'dms', !Join ["", [ !ImportValue Account-Global-AccountCodeLower, !FindInMap [RegionMap, !Ref "AWS::Region", RegionLower]]], !Ref AppCodeLower, !Ref BULower, !Ref ReplicationInstanceName ]]
+      MetricName: "CPUUtilization"
+      Namespace: "AWS/DMS"
+      Period: 300 
+      EvaluationPeriods: 1
+      Statistic: Average
+      Threshold: 90
+      TreatMissingData: "missing"
+
+  DMSFreeStorageSpace30:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      Namespace: AWS/DMS
+      AlarmActions: [!Sub "arn:aws:sns:us-east-1:${AWS::AccountId}:NE789-IncidentTicketProd"]
+      AlarmDescription:
+        Fn::Join:
+          - ""
+          - - "App="
+            - "EDP"
+            - " "
+            - "arsRequired="
+            - !If [IsNotProd, "0", "1"]
+            - " "
+            - "arsSeverity="
+            - "SEV4"
+            - " "
+            - "arsAutoTag="
+            - "EDP_PLATFORM_TEAM"
+            - " "
+            - "emailRequired="
+            - "1"
+            - " "
+            - "emailSubject="
+            - "DMS Replication Instance Storage Space is less than 30 percent"
+            - " "
+            - "environment="
+            - !Ref Environment
+            - " "
+            - "emailAddress="
+            - Ref: EmailAddress
+      AlarmName:
+        Fn::Join:
+          - "_"
+          - - "en411_edp_cwa_free_storage_space_30_percent"
+            - Ref: ReplicationInstanceName              
+      ComparisonOperator: "LessThanOrEqualToThreshold"
+      Dimensions:
+        - Name: ReplicationInstanceIdentifier
+          Value: !Join [ "-", [ 'dms', !Join ["", [ !ImportValue Account-Global-AccountCodeLower, !FindInMap [RegionMap, !Ref "AWS::Region", RegionLower]]], !Ref AppCodeLower, !Ref BULower, !Ref ReplicationInstanceName ]]
+      MetricName: "FreeStorageSpace"
+      Namespace: "AWS/DMS"
+      Period: 300 
+      EvaluationPeriods: 1
+      Statistic: Average
+      Threshold: !Ref ThresholdValue30PCT
+      TreatMissingData: "missing"
+
+  DMSFreeStorageSpace20:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      Namespace: AWS/DMS
+      AlarmActions: [!Sub "arn:aws:sns:us-east-1:${AWS::AccountId}:NE789-IncidentTicketProd"]
+      AlarmDescription:
+        Fn::Join:
+          - ""
+          - - "App="
+            - "EDP"
+            - " "
+            - "arsRequired="
+            - !If [IsNotProd, "0", "1"]
+            - " "
+            - "arsSeverity="
+            - !If [IsNotProd, "SEV4", "SEV3"]
+            - " "
+            - "arsAutoTag="
+            - "EDP_PLATFORM_TEAM"
+            - " "
+            - "emailRequired="
+            - "1"
+            - " "
+            - "emailSubject="
+            - "DMS Replication Instance Storage Space is less than 20 percent"
+            - " "
+            - "environment="
+            - !Ref Environment
+            - " "
+            - "emailAddress="
+            - Ref: EmailAddress
+      AlarmName:
+        Fn::Join:
+          - "_"
+          - - "en411_edp_cwa_free_storage_space_20_percent"
+            - Ref: ReplicationInstanceName              
+      ComparisonOperator: "LessThanOrEqualToThreshold"
+      Dimensions:
+        - Name: ReplicationInstanceIdentifier
+          Value: !Join [ "-", [ 'dms', !Join ["", [ !ImportValue Account-Global-AccountCodeLower, !FindInMap [RegionMap, !Ref "AWS::Region", RegionLower]]], !Ref AppCodeLower, !Ref BULower, !Ref ReplicationInstanceName ]]
+      MetricName: "FreeStorageSpace"
+      Namespace: "AWS/DMS"
+      Period: 300 
+      EvaluationPeriods: 1
+      Statistic: Average
+      Threshold: !Ref ThresholdValue20PCT
+      TreatMissingData: "missing"
+
+  DMSFreeStorageSpace10:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      Namespace: AWS/DMS
+      AlarmActions: [!Sub "arn:aws:sns:us-east-1:${AWS::AccountId}:NE789-IncidentTicketProd"]
+      AlarmDescription:
+        Fn::Join:
+          - ""
+          - - "App="
+            - "EDP"
+            - " "
+            - "arsRequired="
+            - !If [IsNotProd, "0", "1"]
+            - " "
+            - "arsSeverity="
+            - !If [IsNotProd, "SEV4", "SEV2"]
+            - " "
+            - "arsAutoTag="
+            - "EDP_PLATFORM_TEAM"
+            - " "
+            - "emailRequired="
+            - "1"
+            - " "
+            - "emailSubject="
+            - "DMS Replication Instance Storage Space is less than 10 percent"
+            - " "
+            - "environment="
+            - !Ref Environment
+            - " "
+            - "emailAddress="
+            - Ref: EmailAddress
+      AlarmName:
+        Fn::Join:
+          - "_"
+          - - "en411_edp_cwa_free_storage_space_10_percent"
+            - Ref: ReplicationInstanceName              
+      ComparisonOperator: "LessThanOrEqualToThreshold"
+      Dimensions:
+        - Name: ReplicationInstanceIdentifier
+          Value: !Join [ "-", [ 'dms', !Join ["", [ !ImportValue Account-Global-AccountCodeLower, !FindInMap [RegionMap, !Ref "AWS::Region", RegionLower]]], !Ref AppCodeLower, !Ref BULower, !Ref ReplicationInstanceName ]]
+      MetricName: "FreeStorageSpace"
+      Namespace: "AWS/DMS"
+      Period: 300 
+      EvaluationPeriods: 1
+      Statistic: Average
+      Threshold: !Ref ThresholdValue10PCT
+      TreatMissingData: "missing"  
+
+####################################### Outputs #############################################
+Outputs:
+  ReplicationInstance:
+    Description: Replication Instance ID
+    Value: !Ref ReplicationInstance
+  DiskSpaceAlarm1:
+    Description: Free Storage Space 10% Alarm
+    Value: !Ref DMSFreeStorageSpace10
+  DiskSpaceAlarm2:
+    Description: Free Storage Space 20% Alarm
+    Value: !Ref DMSFreeStorageSpace20
+  DiskSpaceAlarm3:
+    Description: Free Storage Space 30% Alarm
+    Value: !Ref DMSFreeStorageSpace30
+  CPUAlarm1:
+    Description: 70% CPU Utilization Alarm
+    Value: !Ref DMSCPUUtilization70
+  CPUAlarm2:
+    Description: 80% CPU Utilization Alarm
+    Value: !Ref DMSCPUUtilization80
+  CPUAlarm3:
+    Description: 90% CPU Utilization Alarm
+    Value: !Ref DMSCPUUtilization90##########################################################################################
+# AWS CloudFormation Template to provision a DMS Replication Instance (With CloudWatch Alarms)
+# Creation date: 10/20/2021
+# Created By: Cedric El Khoury
+# Last modified date: 09/26/2022
+# Last modified By: Carlos Esparza medel
+####################################################################################
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS CloudFormation Template that provisions a DMS Replication Instance (CloudWatch Alarms)
+################################## Metadata ###############################################
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      - 
+        Label: 
+          default: "Project Details"
+        Parameters: 
+          - AppCode
+          - AppCodeLower
+          - Environment
+          - BU
+          - BULower
+          - Purpose
+          - Requestor
+          - OwnerContact
+          - SupportContact
+      - 
+        Label: 
+          default: "DMS Replication Instance Details"
+        Parameters: 
+          - ReplicationInstanceName
+          - ReplicationInstanceType
+          - ReplicationInstanceAZ
+          - AllocatedStorage
+          - SecurityGroups
+          - VPCShortName
+          - AutoMinorVersionUpgrade
+          - PreferredMaintenanceWindow
+          - WeekendOperation
+          - AutomateShutdown
+      - 
+        Label: 
+          default: "CloudWatch Alarms Details"
+        Parameters: 
+          - EmailAddress
+          - ThresholdValue10PCT
+          - ThresholdValue20PCT
+          - ThresholdValue30PCT
+
+################################## Parameters ###############################################
+Parameters:
+  
+  AppCode:
+    Type: String
+    MaxLength: 5
+    AllowedPattern: '^([A-Z0-9_-]){5}$'
+    Description: The application code name (NEECode) cannot be of more that 5 characters
+    ConstraintDescription: Appcode field does not match the required constraints
+    Default: EN411
+
+  AppCodeLower:
+    Type: String
+    MaxLength: 5
+    AllowedPattern: '^([a-z0-9_-]){5}$'
+    Description: The application code name (NEECode) cannot be of more that 5 characters
+    ConstraintDescription: Appcode field does not match the required constraints
+    Default: en411
+
+  Environment:
+    Type: String
+    AllowedValues:
+      - Prod
+      - Test
+      - Dev
+      - QA
+      - DR
+      - Sandbox
+    Default: Dev
+
+  BU:
+    Type: String
+    Description: What is the Business Unit?
+    AllowedValues:
+      - NUC
+      - PD
+      - PGD
+      - CS
+      - IT
+      - AllBU
+      - GASINFRA
+
+  BULower:
+    Type: String
+    Description: What is the Business Unit?
+    AllowedValues:
+      - nuc
+      - pd
+      - pgd
+      - cs
+      - it
+      - allbu 
+      - gasinfra
+
+  Purpose:
+    Type: String
+    Description: Enter a brief summary of the replication instance purpose
+
+  ReplicationInstanceName:
+    Type: String
+    MinLength: '1'
+    MaxLength: '50'
+    #AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    Description: Must be unique and 1-50 characters long. Must begin with a letter and contain only alphanumeric characters, dashes and underscores
+    ConstraintDescription: 'Must be unique and 1-50 characters long. Must begin with a letter and contain only alphanumeric characters, dashes and underscores.'
+
+  ReplicationInstanceType:
+    Description: Choose the type of instance that you want to use for Replication Instance
+    Type: String
+    AllowedValues:
+      - dms.t2.micro
+      - dms.t2.small
+      - dms.t2.medium
+      - dms.t2.large
+      - dms.c4.large
+      - dms.c4.xlarge
+      - dms.c4.2xlarge
+      - dms.c4.4xlarge
+    Default: dms.t2.medium
+
+  ReplicationInstanceAZ:
+    Description: Define what AvailabilityZone the EBS volume will be created in
+    Type: String
+    Default: ""
+    AllowedValues:
+      - ""
+      - us-east-1a
+      - us-east-1b
+      - us-east-1c
+      - us-east-1d
+      - us-east-1e
+      - us-east-1f
+
+  AllocatedStorage:
+    Description: Define the size in GB for the volume that you want to create
+    Type: String
+    Default: 30
+    AllowedPattern: "[0-9]*"
+
+  Requestor:
+    Type: String
+    Description: Please specify email address of the requestor
+
+  OwnerContact:
+      Type: String
+      Description: Please specify email address of the owner
+      AllowedPattern: '^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$'
+      ConstraintDescription: OwnerContact field must be an email address
+      Default: Nelson.Castellanos@fpl.com
+      
+  SupportContact:
+      Type: String
+      Description: Please specify email address of the support contact
+      AllowedPattern: '^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$'
+      ConstraintDescription: SupportContact field must be an email address
+      Default: DL-EDP-PLATFORM@nexteraenergy.com
+
+  SecurityGroups:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Description: Please specify security groups to be attached to the Replication Instance
+
+  VPCShortName:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Description: 'Replication Instance VPC ID'
+    Default: '/account/VPCShortName'
+
+  AutoMinorVersionUpgrade:
+    Type: String
+    Description: Allow minor engine upgrades to be automatically made to the instance during maintenance window
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Default: 'true'
+
+  PreferredMaintenanceWindow: 
+    Type: String
+    Description: Please specify a preferred weekly maintenance window (30 mins in UTC)
+    Default: Sun:19:00-Sun:23:00
+
+  WeekendOperation:
+    Type: String
+    Description: Please specify if the replication instance conducts weekend operations
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  AutomateShutdown:
+    Type: String
+    Description: This field specifies if the server needs to be automatically shut down every day
+    AllowedValues:
+      - "yes"
+      - "no"
+    Default: "no"
+
+  EmailAddress: 
+    Description: Please provide the Email Name or Distribution list Name
+    Type: String
+    AllowedValues:
+      - DL-EDP-PLATFORM
+      - DL-EDP-SUPPORT
+    Default: DL-EDP-SUPPORT
+  
+  ThresholdValue30PCT:
+    Description: Please provide the 30% of the "AllocatedStorage" expressed in exponential (1e9 = 1GB)
+    Type: Number
+  
+  ThresholdValue20PCT:
+    Description: Please provide the 20% of the "AllocatedStorage" expressed in exponential (1e9 = 1GB)
+    Type: Number
+  
+  ThresholdValue10PCT:
+    Description: Please provide the 10% of the "AllocatedStorage" expressed in exponential (1e9 = 1GB)
+    Type: Number
+
+################################## Mappings ##################################################
+Mappings:
+  RegionMap:
+    us-east-1:
+      Region: V
+      RegionLower: v
+
+################################## Conditions ##################################################
+Conditions: 
+  IsNotProd: !Not [!Equals [!Ref Environment, 'Prod']]
+
+####################################### Resources #############################################
+
+Resources:
+  ReplicationInstance:
+    Type: "AWS::DMS::ReplicationInstance"
+    Properties:
+      AllocatedStorage: !Ref AllocatedStorage
+      AutoMinorVersionUpgrade: !Ref AutoMinorVersionUpgrade
+      AvailabilityZone: !Ref ReplicationInstanceAZ
+      KmsKeyId: !ImportValue Platform-Default-KMS
+      MultiAZ: 'false'
+      PreferredMaintenanceWindow: !Ref PreferredMaintenanceWindow
+      PubliclyAccessible: false
+      ReplicationInstanceClass: !Ref ReplicationInstanceType
+      ReplicationSubnetGroupIdentifier: !ImportValue Platform-Default-DMS-Subnet-Group
+      ReplicationInstanceIdentifier: !Join [ "-", [ 'dms', !Join ["", [ !ImportValue Account-Global-AccountCodeLower, !FindInMap [RegionMap, !Ref "AWS::Region", RegionLower]]], !Ref AppCodeLower, !Ref BULower, !Ref ReplicationInstanceName ]]
+      Tags:
+        - Key: AppCode
+          Value: !Ref AppCode
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Requestor
+          Value: !Ref Requestor
+        - Key: BU
+          Value: !Ref BU
+        - Key: Purpose
+          Value: !Ref Purpose
+        - Key: OwnerContact
+          Value: !Ref OwnerContact
+        - Key: SupportContact
+          Value: !Ref SupportContact
+        - Key: AutomateShutdown
+          Value: !Ref AutomateShutdown
+        - Key: WeekendOperation
+          Value: !Ref WeekendOperation
+        - Key: StackName
+          Value: !Ref 'AWS::StackName'
+
+      VpcSecurityGroupIds: !Ref SecurityGroups
+
+  DMSCPUUtilization70:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      Namespace: AWS/DMS
+      AlarmActions: [!Sub "arn:aws:sns:us-east-1:${AWS::AccountId}:NE789-IncidentTicketProd"]
+      AlarmDescription:
+        Fn::Join:
+          - ""
+          - - "App="
+            - "EDP"
+            - " "
+            - "arsRequired="
+            - !If [IsNotProd, "0", "1"]
+            - " "
+            - "arsSeverity="
+            - "SEV4"
+            - " "
+            - "arsAutoTag="
+            - "EDP_PLATFORM_TEAM"
+            - " "
+            - "emailRequired="
+            - "1"
+            - " "
+            - "emailSubject="
+            - "DMS Replication Instance CPU Utilization is greater than 70 percent"
+            - " "
+            - "environment="
+            - !Ref Environment 
+            - " "
+            - "emailAddress="
+            - Ref: EmailAddress
+      AlarmName:
+        Fn::Join:
+          - "_"
+          - - "en411_edp_cwa_cpu_utilization_70"
+            - Ref: ReplicationInstanceName             
+      ComparisonOperator: "GreaterThanThreshold"
+      Dimensions:
+        - Name: ReplicationInstanceIdentifier
+          Value: !Join [ "-", [ 'dms', !Join ["", [ !ImportValue Account-Global-AccountCodeLower, !FindInMap [RegionMap, !Ref "AWS::Region", RegionLower]]], !Ref AppCodeLower, !Ref BULower, !Ref ReplicationInstanceName ]]
+      MetricName: "CPUUtilization"
+      Namespace: "AWS/DMS"
+      Period: 300 
+      EvaluationPeriods: 1
+      Statistic: Average
+      Threshold: 70
+      TreatMissingData: "missing"
+
+  DMSCPUUtilization80:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      Namespace: AWS/DMS
+      AlarmActions: [!Sub "arn:aws:sns:us-east-1:${AWS::AccountId}:NE789-IncidentTicketProd"]
+      AlarmDescription:
+        Fn::Join:
+          - ""
+          - - "App="
+            - "EDP"
+            - " "
+            - "arsRequired="
+            - !If [IsNotProd, "0", "1"]
+            - " "
+            - "arsSeverity="
+            - !If [IsNotProd, "SEV4", "SEV3"]
+            - " "
+            - "arsAutoTag="
+            - "EDP_PLATFORM_TEAM"
+            - " "
+            - "emailRequired="
+            - "1"
+            - " "
+            - "emailSubject="
+            - "DMS Replication Instance CPU Utilization is greater than 80 percent"
+            - " "
+            - "environment="
+            - !Ref Environment
+            - " "
+            - "emailAddress="
+            - Ref: EmailAddress
+      AlarmName:
+        Fn::Join:
+          - "_"
+          - - "en411_edp_cwa_cpu_utilization_80"
+            - Ref: ReplicationInstanceName              
+      ComparisonOperator: "GreaterThanThreshold"
+      Dimensions:
+        - Name: ReplicationInstanceIdentifier
+          Value: !Join [ "-", [ 'dms', !Join ["", [ !ImportValue Account-Global-AccountCodeLower, !FindInMap [RegionMap, !Ref "AWS::Region", RegionLower]]], !Ref AppCodeLower, !Ref BULower, !Ref ReplicationInstanceName ]]
+      MetricName: "CPUUtilization"
+      Namespace: "AWS/DMS"
+      Period: 300 
+      EvaluationPeriods: 1
+      Statistic: Average
+      Threshold: 80
+      TreatMissingData: "missing"
+
+  DMSCPUUtilization90:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      Namespace: AWS/DMS
+      AlarmActions: [!Sub "arn:aws:sns:us-east-1:${AWS::AccountId}:NE789-IncidentTicketProd"]
+      AlarmDescription:
+        Fn::Join:
+          - ""
+          - - "App="
+            - "EDP"
+            - " "
+            - "arsRequired="
+            - !If [IsNotProd, "0", "1"]
+            - " "
+            - "arsSeverity="
+            - !If [IsNotProd, "SEV4", "SEV2"]
+            - " "
+            - "arsAutoTag="
+            - "EDP_PLATFORM_TEAM"
+            - " "
+            - "emailRequired="
+            - "1"
+            - " "
+            - "emailSubject="
+            - "DMS Replication Instance CPU Utilization is greater than 90 percent"
+            - " "
+            - "environment="
+            - !Ref Environment
+            - " "
+            - "emailAddress="
+            - Ref: EmailAddress
+      AlarmName:
+        Fn::Join:
+          - "_"
+          - - "en411_edp_cwa_cpu_utilization_90"
+            - Ref: ReplicationInstanceName              
+      ComparisonOperator: "GreaterThanThreshold"
+      Dimensions:
+        - Name: ReplicationInstanceIdentifier
+          Value: !Join [ "-", [ 'dms', !Join ["", [ !ImportValue Account-Global-AccountCodeLower, !FindInMap [RegionMap, !Ref "AWS::Region", RegionLower]]], !Ref AppCodeLower, !Ref BULower, !Ref ReplicationInstanceName ]]
+      MetricName: "CPUUtilization"
+      Namespace: "AWS/DMS"
+      Period: 300 
+      EvaluationPeriods: 1
+      Statistic: Average
+      Threshold: 90
+      TreatMissingData: "missing"
+
+  DMSFreeStorageSpace30:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      Namespace: AWS/DMS
+      AlarmActions: [!Sub "arn:aws:sns:us-east-1:${AWS::AccountId}:NE789-IncidentTicketProd"]
+      AlarmDescription:
+        Fn::Join:
+          - ""
+          - - "App="
+            - "EDP"
+            - " "
+            - "arsRequired="
+            - !If [IsNotProd, "0", "1"]
+            - " "
+            - "arsSeverity="
+            - "SEV4"
+            - " "
+            - "arsAutoTag="
+            - "EDP_PLATFORM_TEAM"
+            - " "
+            - "emailRequired="
+            - "1"
+            - " "
+            - "emailSubject="
+            - "DMS Replication Instance Storage Space is less than 30 percent"
+            - " "
+            - "environment="
+            - !Ref Environment
+            - " "
+            - "emailAddress="
+            - Ref: EmailAddress
+      AlarmName:
+        Fn::Join:
+          - "_"
+          - - "en411_edp_cwa_free_storage_space_30_percent"
+            - Ref: ReplicationInstanceName              
+      ComparisonOperator: "LessThanOrEqualToThreshold"
+      Dimensions:
+        - Name: ReplicationInstanceIdentifier
+          Value: !Join [ "-", [ 'dms', !Join ["", [ !ImportValue Account-Global-AccountCodeLower, !FindInMap [RegionMap, !Ref "AWS::Region", RegionLower]]], !Ref AppCodeLower, !Ref BULower, !Ref ReplicationInstanceName ]]
+      MetricName: "FreeStorageSpace"
+      Namespace: "AWS/DMS"
+      Period: 300 
+      EvaluationPeriods: 1
+      Statistic: Average
+      Threshold: !Ref ThresholdValue30PCT
+      TreatMissingData: "missing"
+
+  DMSFreeStorageSpace20:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      Namespace: AWS/DMS
+      AlarmActions: [!Sub "arn:aws:sns:us-east-1:${AWS::AccountId}:NE789-IncidentTicketProd"]
+      AlarmDescription:
+        Fn::Join:
+          - ""
+          - - "App="
+            - "EDP"
+            - " "
+            - "arsRequired="
+            - !If [IsNotProd, "0", "1"]
+            - " "
+            - "arsSeverity="
+            - !If [IsNotProd, "SEV4", "SEV3"]
+            - " "
+            - "arsAutoTag="
+            - "EDP_PLATFORM_TEAM"
+            - " "
+            - "emailRequired="
+            - "1"
+            - " "
+            - "emailSubject="
+            - "DMS Replication Instance Storage Space is less than 20 percent"
+            - " "
+            - "environment="
+            - !Ref Environment
+            - " "
+            - "emailAddress="
+            - Ref: EmailAddress
+      AlarmName:
+        Fn::Join:
+          - "_"
+          - - "en411_edp_cwa_free_storage_space_20_percent"
+            - Ref: ReplicationInstanceName              
+      ComparisonOperator: "LessThanOrEqualToThreshold"
+      Dimensions:
+        - Name: ReplicationInstanceIdentifier
+          Value: !Join [ "-", [ 'dms', !Join ["", [ !ImportValue Account-Global-AccountCodeLower, !FindInMap [RegionMap, !Ref "AWS::Region", RegionLower]]], !Ref AppCodeLower, !Ref BULower, !Ref ReplicationInstanceName ]]
+      MetricName: "FreeStorageSpace"
+      Namespace: "AWS/DMS"
+      Period: 300 
+      EvaluationPeriods: 1
+      Statistic: Average
+      Threshold: !Ref ThresholdValue20PCT
+      TreatMissingData: "missing"
+
+  DMSFreeStorageSpace10:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      Namespace: AWS/DMS
+      AlarmActions: [!Sub "arn:aws:sns:us-east-1:${AWS::AccountId}:NE789-IncidentTicketProd"]
+      AlarmDescription:
+        Fn::Join:
+          - ""
+          - - "App="
+            - "EDP"
+            - " "
+            - "arsRequired="
+            - !If [IsNotProd, "0", "1"]
+            - " "
+            - "arsSeverity="
+            - !If [IsNotProd, "SEV4", "SEV2"]
+            - " "
+            - "arsAutoTag="
+            - "EDP_PLATFORM_TEAM"
+            - " "
+            - "emailRequired="
+            - "1"
+            - " "
+            - "emailSubject="
+            - "DMS Replication Instance Storage Space is less than 10 percent"
+            - " "
+            - "environment="
+            - !Ref Environment
+            - " "
+            - "emailAddress="
+            - Ref: EmailAddress
+      AlarmName:
+        Fn::Join:
+          - "_"
+          - - "en411_edp_cwa_free_storage_space_10_percent"
+            - Ref: ReplicationInstanceName              
+      ComparisonOperator: "LessThanOrEqualToThreshold"
+      Dimensions:
+        - Name: ReplicationInstanceIdentifier
+          Value: !Join [ "-", [ 'dms', !Join ["", [ !ImportValue Account-Global-AccountCodeLower, !FindInMap [RegionMap, !Ref "AWS::Region", RegionLower]]], !Ref AppCodeLower, !Ref BULower, !Ref ReplicationInstanceName ]]
+      MetricName: "FreeStorageSpace"
+      Namespace: "AWS/DMS"
+      Period: 300 
+      EvaluationPeriods: 1
+      Statistic: Average
+      Threshold: !Ref ThresholdValue10PCT
+      TreatMissingData: "missing"  
+
+####################################### Outputs #############################################
+Outputs:
+  ReplicationInstance:
+    Description: Replication Instance ID
+    Value: !Ref ReplicationInstance
+  DiskSpaceAlarm1:
+    Description: Free Storage Space 10% Alarm
+    Value: !Ref DMSFreeStorageSpace10
+  DiskSpaceAlarm2:
+    Description: Free Storage Space 20% Alarm
+    Value: !Ref DMSFreeStorageSpace20
+  DiskSpaceAlarm3:
+    Description: Free Storage Space 30% Alarm
+    Value: !Ref DMSFreeStorageSpace30
+  CPUAlarm1:
+    Description: 70% CPU Utilization Alarm
+    Value: !Ref DMSCPUUtilization70
+  CPUAlarm2:
+    Description: 80% CPU Utilization Alarm
+    Value: !Ref DMSCPUUtilization80
+  CPUAlarm3:
+    Description: 90% CPU Utilization Alarm
+    Value: !Ref DMSCPUUtilization90
